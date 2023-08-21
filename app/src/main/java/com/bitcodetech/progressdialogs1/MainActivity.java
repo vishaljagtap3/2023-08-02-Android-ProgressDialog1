@@ -1,19 +1,26 @@
 package com.bitcodetech.progressdialogs1;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
 
     private Button btnDownload;
     private TextView txtProgress;
+    private ProgressDialog progressDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,63 +40,37 @@ public class MainActivity extends AppCompatActivity {
                         "https://bitcode.in/android/notes.zip"
                 };
 
-                new DownloadThread()
+                progressDialog = DialogUtil.getProgressDialog(
+                        MainActivity.this,
+                        "BitCode",
+                        "Downloading...",
+                        ProgressDialog.STYLE_HORIZONTAL
+                );
+                progressDialog.show();
+                new DownloadThread(new DownloadHandler())
                         .execute(files);
             }
         });
 
     }
 
-    private class DownloadThread extends AsyncTask<String, Integer, Float> {
-        ProgressDialog progressDialog;
-
+    class DownloadHandler extends Handler {
         @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            Log.e("tag", "onPre: " + Thread.currentThread().getName());
-            progressDialog = new ProgressDialog(MainActivity.this);
-            progressDialog.setMessage("Downloading");
-            progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-            progressDialog.show();
-        }
-
-        @Override
-        protected Float doInBackground(String [] files) {
-            Log.e("tag", "doInBg: " + Thread.currentThread().getName());
-            for(String file : files) {
-
-                progressDialog.setMessage(
-                        "Downloading " + file
-                );
-
-                for (int i = 0; i <= 100; i++) {
-                    try {
-                        Thread.sleep(30);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                    progressDialog.setProgress(i);
-                    //btnDownload.setText(file + " " + i + "%");
-                    publishProgress(i);
-                }
+        public void handleMessage(@NonNull Message msg) {
+            super.handleMessage(msg);
+            if(msg.what == 2) {
+                mt((String) msg.obj);
+                progressDialog.dismiss();
             }
-            return 12.12f;
-        }
-
-        @Override
-        protected void onProgressUpdate(Integer... values) {
-            super.onProgressUpdate(values);
-            Log.e("tag", "onProUpdate: " + Thread.currentThread().getName());
-            btnDownload.setText(values[0] + "%");
-        }
-
-        @Override
-        protected void onPostExecute(Float res) {
-            super.onPostExecute(res);
-            Log.e("tag", "onPost: " + Thread.currentThread().getName());
-            btnDownload.setText("res = " + res);
-            progressDialog.dismiss();
+            else {
+                progressDialog.setProgress((Integer) msg.obj);
+            }
         }
     }
+
+    private void mt(String text) {
+        Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
+    }
+
 
 }
